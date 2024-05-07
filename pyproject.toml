@@ -4,10 +4,12 @@ version = "0.1.0"
 description = "Analyzes installed packages and produces metadata"
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
+packages = [
+    { include = "src" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.12"
-
 
 [build-system]
 requires = ["poetry-core"]
