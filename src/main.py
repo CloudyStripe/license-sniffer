@@ -61,7 +61,7 @@ try:
         dependencyList = list(dependencies.keys()) + list(devDependencies.keys())
 
         scanModules(modulesDir, dependencyList)
-
+        print("Scan complete.")
         print("Dependencies and their licenses:")
         for dep, lic in licenseCollection:
             print(f"{dep}: {lic}")
