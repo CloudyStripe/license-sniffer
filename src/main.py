@@ -3,6 +3,7 @@ import json
 import os
 
 manifestLocation = input("Enter the manifest file location: ")
+analyzedModulePath = []
 licenseCollection = []
 
 def scanModules(modulesDir, dependencyList):
@@ -25,12 +26,18 @@ def scanModules(modulesDir, dependencyList):
             print(f"No nested dependency directory for {dependency}")
 
         # Check the root node_modules
+
+        if dependencyDir in analyzedModulePath:
+            print(f"Dependency {dependency} already analyzed")
+            continue
+
         if os.path.exists(dependencyDir) and os.path.exists(os.path.join(dependencyDir, 'package.json')):
             print(f"Checking {dependencyDir}...")
             with open(os.path.join(dependencyDir, 'package.json'), "r", encoding="utf-8") as file:
                 dependencyJson = json.load(file)
                 license = dependencyJson.get('license') or dependencyJson.get('licenses') or 'No license found'
                 licenseCollection.append((dependency, license))
+                analyzedModulePath.append(dependencyDir)
                 
                 # Enqueue child dependencies
                 dependencies = dependencyJson.get('dependencies') or {}
