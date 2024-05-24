@@ -20,6 +20,10 @@ def scanModules(modulesDir, dependencyList):
             with open(os.path.join(nestedDependencyDir, 'package.json'), "r", encoding="utf-8") as file:
                 dependencyJson = json.load(file)
                 license = dependencyJson.get('license') or dependencyJson.get('licenses') or 'No license found'
+                print (f"License: {type(license)}")
+                if type(license) == list:
+                    license = license[0].get('type') or license[0].get('name') or 'No license found'
+                
                 licenseCollection.append((dependency, license))
                 continue  # Proceed to next item in queue
         else:
@@ -36,6 +40,8 @@ def scanModules(modulesDir, dependencyList):
             with open(os.path.join(dependencyDir, 'package.json'), "r", encoding="utf-8") as file:
                 dependencyJson = json.load(file)
                 license = dependencyJson.get('license') or dependencyJson.get('licenses') or 'No license found'
+                if type(license) is list:
+                    license = license[0].get('type') or license[0].get('name') or 'No license found'
                 licenseCollection.append((dependency, license))
                 analyzedModulePath.append(dependencyDir)
                 
