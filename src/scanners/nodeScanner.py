@@ -59,10 +59,8 @@ class NodeScanner:
 
                 # Enqueue child dependencies if present
                 self.enqueue_child_dependencies(transitive_deps)
-            return True
         else:
             print(f"No package.json found for {dependency} at {dependency_dir}")
-            return False
         
     def check_transitive_dependencies(self, transitive_deps, dependency_dir):
 
