@@ -14,6 +14,7 @@ try:
 
         scanner = NodeScanner(manifestLocation)
         scanner.scan()
+        scanner.export_license_csv()
 
 except Exception as e:
     print(f"Invalid path or file: {e}")
