@@ -90,16 +90,33 @@ class NodeScanner:
     
     def _categorize_license(self, license_name):
         open_source_licenses = [
-            'MIT', 'Apache-2.0', 'GPL-3.0', 'BSD-3-Clause', 'ISC',
-            'BSD-2-Clause', 'Python-2.0', 'CC0-1.0'
+            'MIT', 'Apache-2.0', 'GPL-3.0', 'BSD', 'BSD-3-Clause', 'ISC',
+            'BSD-2-Clause', 'Python-2.0', 'CC0-1.0', 'CC-BY-4.0', '0BSD', 'CC-BY-3.0'
         ]
         closed_source_licenses = ['Proprietary']
         partial_licenses = ['LGPL-2.1', 'LGPL-3.0']
+        unlicensed_licenses = ['UNLICENSED', 'Unlicense']
+        eula_licenses = ['SEE LICENSE IN EULA_MICROSOFT VISUAL STUDIO TEAM SERVICES AUTHHELPER FOR NPM.txt']
 
         # Handle multiple licenses
         if 'AND' in license_name or 'OR' in license_name:
-            licenses = license_name.split(' AND ') if 'AND' in license_name else license_name.split(' OR ')
-            categories = set(self._categorize_license(lic.strip().strip('()')) for lic in licenses)
+            licenses = license_name.replace('AND', 'OR').split('OR')
+            categories = set()
+            for lic in licenses:
+                lic = lic.strip().strip('()')
+                if lic in open_source_licenses:
+                    categories.add('Open Source')
+                elif lic in closed_source_licenses:
+                    categories.add('Closed Source')
+                elif lic in partial_licenses:
+                    categories.add('Partial')
+                elif lic in unlicensed_licenses:
+                    categories.add('Unlicensed')
+                elif lic in eula_licenses:
+                    categories.add('EULA')
+                else:
+                    categories.add('Unknown')
+        
             if len(categories) == 1:
                 return categories.pop()  # If all licenses fall into the same category. Sets cannot be indexed.
             else:
@@ -111,8 +128,14 @@ class NodeScanner:
             return 'Closed Source'
         elif license_name in partial_licenses:
             return 'Partial'
+        elif license_name in unlicensed_licenses:
+            return 'Unlicensed'
+        elif license_name in eula_licenses:
+            return 'EULA'
         else:
             return 'Unknown'
+
+
 
 
     def export_license_csv(self):
@@ -129,19 +152,19 @@ class NodeScanner:
 
         with open('license_report.csv', 'w', newline='') as file:
             writer = csv.writer(file)
-            
-            # Write the dependency and license headers
-            writer.writerow(['Dependency', 'License'])
+
+            # Write the category counts
+            writer.writerow(['Category', 'Count'])
+            for category, count in category_counts.items():
+                writer.writerow([category, count])
+
             writer.writerow(['', ''])
 
+            writer.writerow(['Dependency', 'License'])
+            writer.writerow(['', ''])
             # Write the categorized dependencies and their licenses
             for category, licenses in categorized_licenses.items():
                 writer.writerow([category, ''])
                 for dep, lic in licenses:
                     writer.writerow([dep, lic])
                 writer.writerow(['', ''])
-
-            # Write the category counts
-            writer.writerow(['Category', 'Count'])
-            for category, count in category_counts.items():
-                writer.writerow([category, count])
