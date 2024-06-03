@@ -50,7 +50,7 @@ class NodeScanner:
                 self.analyzed_module_paths.append(dependency_dir)
 
                 ##check nested node_modules
-                transitive_deps = dependency_json.get('dependencies', {}).keys()
+                transitive_deps = list(dependency_json.get('dependencies', {}).keys())
                 if transitive_deps:
                     analyzed_nested_deps = self._check_transitive_dependencies(transitive_deps, dependency_dir)
                     if analyzed_nested_deps:
@@ -66,17 +66,18 @@ class NodeScanner:
     def _check_transitive_dependencies(self, transitive_deps, dependency_dir):
 
         analyzed_transitive_deps = []
-
         if os.path.exists(os.path.join(dependency_dir, 'node_modules')):
-                    for transitive_dep in transitive_deps:
-                        transitive_dep_dir = os.path.join(dependency_dir, 'node_modules', transitive_dep)
-                        if transitive_dep_dir not in self.analyzed_module_paths and os.path.exists(os.path.join(transitive_dep_dir, 'package.json')):
-                            with open(os.path.join(transitive_dep_dir, 'package.json'), "r", encoding="utf-8") as file:
-                                transitive_dep_json = json.load(file)
-                                transitive_license = transitive_dep_json.get('license') or transitive_dep_json.get('licenses') or 'No license found'
-                                self.license_collection.append((transitive_dep, transitive_license))
-                                analyzed_transitive_deps.append(transitive_dep)
-                                return analyzed_transitive_deps
+            for transitive_dep in transitive_deps:
+                transitive_dep_dir = os.path.join(dependency_dir, 'node_modules', transitive_dep)
+                if transitive_dep_dir not in self.analyzed_module_paths and os.path.exists(os.path.join(transitive_dep_dir, 'package.json')):
+                    with open(os.path.join(transitive_dep_dir, 'package.json'), "r", encoding="utf-8") as file:
+                        transitive_dep_json = json.load(file)
+                        transitive_license = transitive_dep_json.get('license') or transitive_dep_json.get('licenses') or 'No license found'
+                        if isinstance(transitive_license, list):
+                            transitive_license = transitive_license[0].get('type') or license[0].get('name') or 'No license found'
+                            self.license_collection.append((transitive_dep, transitive_license))
+                            analyzed_transitive_deps.append(transitive_dep)
+                            return analyzed_transitive_deps
 
     def _enqueue_child_dependencies(self, dependencies):
         for child_dep in dependencies:
@@ -91,7 +92,7 @@ class NodeScanner:
     def _categorize_license(self, license_name):
         open_source_licenses = [
             'MIT', 'Apache-2.0', 'GPL-3.0', 'BSD', 'BSD-3-Clause', 'ISC',
-            'BSD-2-Clause', 'Python-2.0', 'CC0-1.0', 'CC-BY-4.0', '0BSD', 'CC-BY-3.0'
+            'BSD-2-Clause', 'Python-2.0', 'CC0-1.0', 'CC-BY-4.0', '0BSD', 'CC-BY-3.0', 'OFL-1.1', 'MPL-2.0'
         ]
         closed_source_licenses = ['Proprietary']
         partial_licenses = ['LGPL-2.1', 'LGPL-3.0']
@@ -134,8 +135,6 @@ class NodeScanner:
             return 'EULA'
         else:
             return 'Unknown'
-
-
 
 
     def export_license_csv(self):
