@@ -1,5 +1,5 @@
 import os
-from scanners.nodeScanner import NodeScanner
+from scanners.node.nodeScanner import NodeScanner
 
 manifestLocation = input("Enter the manifest file location: ")
 
