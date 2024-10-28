@@ -7,15 +7,15 @@ class NodeScanner:
 
     def __init__(self, manifestLocation):
         self.manifest_location = manifestLocation
-        self.base_path = os.path.dirname(manifestLocation)
-        self.modules_dir = os.path.join(self.base_path, 'node_modules')
+        self._base_path = os.path.dirname(manifestLocation)
+        self._modules_dir = os.path.join(self._base_path, 'node_modules')
         self.license_collection = []
-        self.analyzed_module_paths = []
-        self.dependency_queue = deque()
+        self._analyzed_module_paths = []
+        self._dependency_queue = deque()
 
     def scan(self):
         try:
-            with open(self.manifest_location, "r", encoding="utf-8") as file:
+            with open(self.manifest_location, "r") as file:
                 if os.path.basename(file.name) != 'package.json':
                     print("Error: Provided file is not a package.json")
                     return
@@ -30,9 +30,9 @@ class NodeScanner:
             print(f"Error processing the file: {e}")
 
     def _scan_modules(self):
-        self.dependency_queue = deque([(self.modules_dir, dep) for dep in self.dependency_list])
-        while self.dependency_queue:
-            modules_dir, dependency = self.dependency_queue.popleft()
+        self._dependency_queue = deque([(self._modules_dir, dep) for dep in self.dependency_list])
+        while self._dependency_queue:
+            modules_dir, dependency = self._dependency_queue.popleft()
             # Check root module
             root_dependency_dir = os.path.join(modules_dir, dependency)
             if root_dependency_dir not in self.analyzed_module_paths:
@@ -55,7 +55,7 @@ class NodeScanner:
                     analyzed_nested_deps = self._check_transitive_dependencies(transitive_deps, dependency_dir)
                     if analyzed_nested_deps:
                         ## Remove analyzed nested dependencies from transitive dependencies. Not doing so would result in checking the root module, which
-                        ## we can infer belongs to another package based on th existence of the nested dependency
+                        ## we can infer belongs to another package based on the existence of the nested dependency
                         transitive_deps = [dep for dep in transitive_deps if dep not in analyzed_nested_deps]
 
                 # Enqueue child dependencies if present
@@ -69,7 +69,7 @@ class NodeScanner:
         if os.path.exists(os.path.join(dependency_dir, 'node_modules')):
             for transitive_dep in transitive_deps:
                 transitive_dep_dir = os.path.join(dependency_dir, 'node_modules', transitive_dep)
-                if transitive_dep_dir not in self.analyzed_module_paths and os.path.exists(os.path.join(transitive_dep_dir, 'package.json')):
+                if transitive_dep_dir not in self._analyzed_module_paths and os.path.exists(os.path.join(transitive_dep_dir, 'package.json')):
                     with open(os.path.join(transitive_dep_dir, 'package.json'), "r", encoding="utf-8") as file:
                         transitive_dep_json = json.load(file)
                         transitive_license = transitive_dep_json.get('license') or transitive_dep_json.get('licenses') or 'No license found'
@@ -81,10 +81,10 @@ class NodeScanner:
 
     def _enqueue_child_dependencies(self, dependencies):
         for child_dep in dependencies:
-            child_dep_dir = os.path.join(self.modules_dir, child_dep)
-            if child_dep_dir not in self.analyzed_module_paths:
-                print(f"Enqueuing child dependency {child_dep} from {self.modules_dir}")
-                self.dependency_queue.append((os.path.join(self.modules_dir), child_dep))
+            child_dep_dir = os.path.join(self._modules_dir, child_dep)
+            if child_dep_dir not in self._analyzed_module_paths:
+                print(f"Enqueuing child dependency {child_dep} from {self._modules_dir}")
+                self._dependency_queue.append((os.path.join(self._modules_dir), child_dep))
 
     def get_license_collection(self):
         return self.license_collection
