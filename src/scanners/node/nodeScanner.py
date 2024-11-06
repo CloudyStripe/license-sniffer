@@ -13,28 +13,40 @@ class NodeScanner:
         self._analyzed_module_paths = []
         self._dependency_queue = deque()
 
+
+
+    ## Scan the package.json file for dependencies and their licenses
     def scan(self):
         try:
             with open(self.manifest_location, "r") as file:
                 if os.path.basename(file.name) != 'package.json':
                     print("Error: Provided file is not a package.json")
                     return
-                print("package.json located. Reading file...")
+                
+                print("Package.json located. Reading file...")
                 manifest_json = json.load(file)
                 self.dependency_list = list(manifest_json.get('dependencies', {}).keys()) + list(manifest_json.get('devDependencies', {}).keys())
+
+                ## Now we have our dependencies (and dev dependencies), we can scan the modules directory for their licenses
                 self._scan_modules()
+
                 print("Scan complete. Dependencies and their licenses:")
                 for dep, lic in self.license_collection:
                     print(f"{dep}: {lic}")
+
         except Exception as e:
             print(f"Error processing the file: {e}")
 
     def _scan_modules(self):
+        ## Enqueue the root module's dependencies
         self._dependency_queue = deque([(self._modules_dir, dep) for dep in self.dependency_list])
+
+        ## Dependency queue will continue to be populated until all dependencies have been analyzed
         while self._dependency_queue:
             modules_dir, dependency = self._dependency_queue.popleft()
-            # Check root module
+            ## Check root module by combining the node_modules directory and the dependency name
             root_dependency_dir = os.path.join(modules_dir, dependency)
+            ## Check if the dependency has already been analyzed - packages can share dependencies
             if root_dependency_dir not in self.analyzed_module_paths:
                 self._check_dependency(root_dependency_dir, dependency)
 
