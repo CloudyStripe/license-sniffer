@@ -13,8 +13,6 @@ class NodeScanner:
         self._analyzed_module_paths = []
         self._dependency_queue = deque()
 
-
-
     ## Scan the package.json file for dependencies and their licenses
     def scan(self):
         try:
@@ -51,17 +49,26 @@ class NodeScanner:
                 self._check_dependency(root_dependency_dir, dependency)
 
     def _check_dependency(self, dependency_dir, dependency):
+        ## Check if the dependency has a package.json file
         if os.path.exists(os.path.join(dependency_dir, 'package.json')):
-            print(f"Checking {dependency_dir} for license information...")
+            print(f"Checking {dependency_dir} for license information for dependency {dependency}.")
+
             with open(os.path.join(dependency_dir, 'package.json'), "r", encoding="utf-8") as file:
+                ## Load the package.json file into JSON and extract the license information
                 dependency_json = json.load(file)
+                ## License information can be stored in 'license' or 'licenses' key
                 license = dependency_json.get('license') or dependency_json.get('licenses') or 'No license found'
+                ## Sometimes, the license information is stored in a list
                 if isinstance(license, list):
+                    ##REMINDER! Revisit this later. Am I only considering the first license in the list? Yikes...
                     license = license[0].get('type') or license[0].get('name') or 'No license found'
+
+                ## Append the dependency and its license to the license collection
                 self.license_collection.append((dependency, license))
                 self.analyzed_module_paths.append(dependency_dir)
 
-                ##check nested node_modules
+                ## While we're here, let's check if the dependency has any nested dependencies
+                ## Only dependencies are analyzed, because dev dependencies are not included in the final package that we use.
                 transitive_deps = list(dependency_json.get('dependencies', {}).keys())
                 if transitive_deps:
                     analyzed_nested_deps = self._check_transitive_dependencies(transitive_deps, dependency_dir)
@@ -102,6 +109,7 @@ class NodeScanner:
         return self.license_collection
     
     def _categorize_license(self, license_name):
+        ##REMINDER! Move this to a separate file.
         open_source_licenses = [
             'MIT', 'Apache-2.0', 'GPL-3.0', 'BSD', 'BSD-3-Clause', 'ISC',
             'BSD-2-Clause', 'Python-2.0', 'CC0-1.0', 'CC-BY-4.0', '0BSD', 'CC-BY-3.0', 'OFL-1.1', 'MPL-2.0'
