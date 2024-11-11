@@ -51,7 +51,7 @@ class NodeScanner:
     def _check_dependency(self, dependency_dir, dependency):
         ## Check if the dependency has a package.json file
         if os.path.exists(os.path.join(dependency_dir, 'package.json')):
-            print(f"Checking {dependency_dir} for license information for dependency {dependency}.")
+            print(f"Checking {dependency_dir} for license information from dependency {dependency}.")
 
             with open(os.path.join(dependency_dir, 'package.json'), "r", encoding="utf-8") as file:
                 ## Load the package.json file into JSON and extract the license information
