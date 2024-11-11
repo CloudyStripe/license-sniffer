@@ -67,30 +67,51 @@ class NodeScanner:
                 self.license_collection.append((dependency, license))
                 self.analyzed_module_paths.append(dependency_dir)
 
-                ## While we're here, let's check if the dependency has any nested dependencies
+                ## While we're here, we need to check for transitive dependencies
                 ## Only dependencies are analyzed, because dev dependencies are not included in the final package that we use.
                 transitive_deps = list(dependency_json.get('dependencies', {}).keys())
                 if transitive_deps:
                     analyzed_nested_deps = self._check_transitive_dependencies(transitive_deps, dependency_dir)
                     if analyzed_nested_deps:
-                        ## Remove analyzed nested dependencies from transitive dependencies. Not doing so would result in checking the root module, which
-                        ## we can infer belongs to another package based on the existence of the nested dependency
+                        '''
+                        If a package is found within a dependency's own node_modules, we can infer it has a 
+                        counterpart with a different version in the root node_modules. In this case, the root 
+                        version does not belong directly to our package, so we will not enqueue it here. 
+                        Instead, we allow the root version to be analyzed when it’s enqueued by its actual owner.
+                        '''
                         transitive_deps = [dep for dep in transitive_deps if dep not in analyzed_nested_deps]
 
-                # Enqueue child dependencies if present
                 self._enqueue_child_dependencies(transitive_deps)
         else:
             print(f"No package.json found for {dependency} at {dependency_dir}")
-        
-    def _check_transitive_dependencies(self, transitive_deps, dependency_dir):
 
+    '''
+    If you are wondering why we scan a dependency's own `node_modules` directory before enqueuing 
+    its transitive dependencies, it’s because of deduplication behavior in Node.js. When multiple 
+    packages depend on the same version of a dependency, Node.js deduplication places that dependency 
+    at the root `node_modules`. However, if different versions are required, deduplication does not apply.
+    The most common (or first encountered) will be placed at the root, and the others will be placed in
+    the dependency's `node_modules` directory.
+
+    By scanning each dependency's own `node_modules` directory first, we ensure we capture all unique 
+    versions of transitive dependencies that might not have been hoisted to the root. Without this step, 
+    we would incorrectly assume all transitive dependencies are located at the root, leading to missed 
+    dependencies in cases where deduplication was not applied due to version differences.
+    '''
+
+    def _check_transitive_dependencies(self, transitive_deps, dependency_dir):
         analyzed_transitive_deps = []
+        ## First, let's ensure the package has a node_modules directory. If not, we can skip.
+        ## If no node_modules directory is found, we can assume all transitive dependencies can be found in the root node_modules.
         if os.path.exists(os.path.join(dependency_dir, 'node_modules')):
             for transitive_dep in transitive_deps:
                 transitive_dep_dir = os.path.join(dependency_dir, 'node_modules', transitive_dep)
+                ## Check if the transitive dependency has already been analyzed
+                ## REMINDER! Revisit this later. Do we need to be concerned about transitive dependencies being analyzed multiple times?
                 if transitive_dep_dir not in self._analyzed_module_paths and os.path.exists(os.path.join(transitive_dep_dir, 'package.json')):
                     with open(os.path.join(transitive_dep_dir, 'package.json'), "r", encoding="utf-8") as file:
                         transitive_dep_json = json.load(file)
+                        ## REMINDER! Revisit this later. We have duplicate code here. Refactor.
                         transitive_license = transitive_dep_json.get('license') or transitive_dep_json.get('licenses') or 'No license found'
                         if isinstance(transitive_license, list):
                             transitive_license = transitive_license[0].get('type') or license[0].get('name') or 'No license found'
@@ -100,6 +121,7 @@ class NodeScanner:
 
     def _enqueue_child_dependencies(self, dependencies):
         for child_dep in dependencies:
+            ## Construct file paths for transitive dependencies
             child_dep_dir = os.path.join(self._modules_dir, child_dep)
             if child_dep_dir not in self._analyzed_module_paths:
                 print(f"Enqueuing child dependency {child_dep} from {self._modules_dir}")
