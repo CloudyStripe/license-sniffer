@@ -2,6 +2,7 @@ from collections import defaultdict, deque
 import csv
 import json
 import os
+from ..utils.licenseCategorize import categorizeLicense 
 
 class NodeScanner:
 
@@ -45,7 +46,7 @@ class NodeScanner:
             ## Check root module by combining the node_modules directory and the dependency name
             root_dependency_dir = os.path.join(modules_dir, dependency)
             ## Check if the dependency has already been analyzed - packages can share dependencies
-            if root_dependency_dir not in self.analyzed_module_paths:
+            if root_dependency_dir not in self._analyzed_module_paths:
                 self._check_dependency(root_dependency_dir, dependency)
 
     def _check_dependency(self, dependency_dir, dependency):
@@ -65,7 +66,7 @@ class NodeScanner:
 
                 ## Append the dependency and its license to the license collection
                 self.license_collection.append((dependency, license))
-                self.analyzed_module_paths.append(dependency_dir)
+                self._analyzed_module_paths.append(dependency_dir)
 
                 ## While we're here, we need to check for transitive dependencies
                 ## Only dependencies are analyzed, because dev dependencies are not included in the final package that we use.
@@ -131,53 +132,8 @@ class NodeScanner:
         return self.license_collection
     
     def _categorize_license(self, license_name):
-        ##REMINDER! Move this to a separate file.
-        open_source_licenses = [
-            'MIT', 'Apache-2.0', 'GPL-3.0', 'BSD', 'BSD-3-Clause', 'ISC',
-            'BSD-2-Clause', 'Python-2.0', 'CC0-1.0', 'CC-BY-4.0', '0BSD', 'CC-BY-3.0', 'OFL-1.1', 'MPL-2.0'
-        ]
-        closed_source_licenses = ['Proprietary']
-        partial_licenses = ['LGPL-2.1', 'LGPL-3.0']
-        unlicensed_licenses = ['UNLICENSED', 'Unlicense']
-        eula_licenses = ['SEE LICENSE IN EULA_MICROSOFT VISUAL STUDIO TEAM SERVICES AUTHHELPER FOR NPM.txt']
-
-        # Handle multiple licenses
-        if 'AND' in license_name or 'OR' in license_name:
-            licenses = license_name.replace('AND', 'OR').split('OR')
-            categories = set()
-            for lic in licenses:
-                lic = lic.strip().strip('()')
-                if lic in open_source_licenses:
-                    categories.add('Open Source')
-                elif lic in closed_source_licenses:
-                    categories.add('Closed Source')
-                elif lic in partial_licenses:
-                    categories.add('Partial')
-                elif lic in unlicensed_licenses:
-                    categories.add('Unlicensed')
-                elif lic in eula_licenses:
-                    categories.add('EULA')
-                else:
-                    categories.add('Unknown')
+        return categorizeLicense(license_name)
         
-            if len(categories) == 1:
-                return categories.pop()  # If all licenses fall into the same category. Sets cannot be indexed.
-            else:
-                return 'Mixed'
-
-        if license_name in open_source_licenses:
-            return 'Open Source'
-        elif license_name in closed_source_licenses:
-            return 'Closed Source'
-        elif license_name in partial_licenses:
-            return 'Partial'
-        elif license_name in unlicensed_licenses:
-            return 'Unlicensed'
-        elif license_name in eula_licenses:
-            return 'EULA'
-        else:
-            return 'Unknown'
-
 
     def export_license_csv(self):
         # Initialize the category count dictionary
