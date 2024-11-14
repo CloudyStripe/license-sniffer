@@ -2,7 +2,7 @@ from collections import defaultdict, deque
 import csv
 import json
 import os
-from scanners.utils.licenseCategorize import categorizeLicense 
+from ..utils.licenseCategorize import categorizeLicense 
 
 class NodeScanner:
 
@@ -46,7 +46,7 @@ class NodeScanner:
             ## Check root module by combining the node_modules directory and the dependency name
             root_dependency_dir = os.path.join(modules_dir, dependency)
             ## Check if the dependency has already been analyzed - packages can share dependencies
-            if root_dependency_dir not in self.analyzed_module_paths:
+            if root_dependency_dir not in self._analyzed_module_paths:
                 self._check_dependency(root_dependency_dir, dependency)
 
     def _check_dependency(self, dependency_dir, dependency):
@@ -66,7 +66,7 @@ class NodeScanner:
 
                 ## Append the dependency and its license to the license collection
                 self.license_collection.append((dependency, license))
-                self.analyzed_module_paths.append(dependency_dir)
+                self._analyzed_module_paths.append(dependency_dir)
 
                 ## While we're here, we need to check for transitive dependencies
                 ## Only dependencies are analyzed, because dev dependencies are not included in the final package that we use.
